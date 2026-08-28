@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version '9.0.0'
+    id 'com.gradleup.shadow' version '8.3.8'
 }
 
 group = 'com.cheatneutraliser'
@@ -14,6 +14,7 @@ java {
 
 repositories {
     maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
+    mavenCentral()
     maven { url = uri('https://repo.codemc.io/repository/maven-releases/') }
     maven { url = uri('https://repo.codemc.io/repository/maven-snapshots/') }
 }
@@ -41,4 +42,6 @@ shadowJar {
     relocate('io.github.retrooper.packetevents', 'com.cheatneutraliser.libs.packetevents')
 }
 
-tasks.build { dependsOn tasks.shadowJar }
+tasks.named('build') {
+    dependsOn(tasks.named('shadowJar'))
+}
