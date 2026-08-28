@@ -22,23 +22,32 @@ public final class CheatNeutraliserCommand implements CommandExecutor {
             String mode = plugin.getConfig().getString("neutralisation.mode", "NEUTRALISE");
             boolean kick = plugin.getConfig().getBoolean("kick.enabled", false)
                     && "KICK".equalsIgnoreCase(mode);
+            boolean packetExceptionKick = !plugin.getConfig().getBoolean("neutralisation.enabled", true)
+                    || !"NEUTRALISE".equalsIgnoreCase(mode);
 
             sender.sendMessage(ChatColor.AQUA + "CheatNeutraliser " + ChatColor.WHITE + plugin.getDescription().getVersion());
             sender.sendMessage(ChatColor.GRAY + "Packet guard: " + ChatColor.GREEN + "ACTIVE");
             sender.sendMessage(ChatColor.GRAY + "Tracked players: " + ChatColor.WHITE + plugin.getPacketGuard().getTrackedPlayers());
             sender.sendMessage(ChatColor.GRAY + "Mode: " + ChatColor.WHITE + mode.toUpperCase());
             sender.sendMessage(ChatColor.GRAY + "Profiles: " + ChatColor.WHITE + (profiles.isEmpty() ? "none" : String.join(", ", profiles)));
+            sender.sendMessage(ChatColor.GRAY + "PacketEvents auto-kick: " + (packetExceptionKick ? ChatColor.RED + "ON" : ChatColor.GREEN + "OFF"));
             sender.sendMessage(ChatColor.GRAY + "Optional kick enforcement: " + (kick ? ChatColor.RED + "ON" : ChatColor.GREEN + "OFF"));
             sender.sendMessage(ChatColor.GRAY + "Metadata-independent checks: " + ChatColor.GREEN + "ON");
             return true;
         }
         if (args[0].equalsIgnoreCase("reload")) {
             plugin.reloadConfig();
+            plugin.applyPacketExceptionPolicy();
             sender.sendMessage(ChatColor.AQUA + "CheatNeutraliser configuration reloaded.");
             sender.sendMessage(ChatColor.GRAY + "Active profiles: " + ChatColor.WHITE
                     + String.join(", ", plugin.getConfig().getStringList("client-profiles.enabled")));
             sender.sendMessage(ChatColor.GRAY + "Mode: " + ChatColor.WHITE
                     + plugin.getConfig().getString("neutralisation.mode", "NEUTRALISE").toUpperCase());
+            sender.sendMessage(ChatColor.GRAY + "PacketEvents auto-kick: "
+                    + (plugin.getConfig().getBoolean("neutralisation.enabled", true)
+                    && "NEUTRALISE".equalsIgnoreCase(plugin.getConfig().getString("neutralisation.mode", "NEUTRALISE"))
+                    ? ChatColor.GREEN + "OFF"
+                    : ChatColor.RED + "ON"));
             return true;
         }
         if (args[0].equalsIgnoreCase("debug")) {
