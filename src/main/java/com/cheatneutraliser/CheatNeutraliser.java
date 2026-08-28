@@ -20,6 +20,13 @@ public final class CheatNeutraliser extends JavaPlugin {
             return;
         }
 
+        // PacketEvents normally owns the decoder exception path. Its default
+        // safety setting can send a literal "Invalid packet" disconnect before
+        // Bukkit creates a PlayerKickEvent, so cancelling PlayerKickEvent alone
+        // is too late. CheatNeutraliser owns the neutralisation policy and keeps
+        // PacketEvents from turning decoder exceptions into an automatic kick.
+        applyPacketExceptionPolicy();
+
         analyzer = new AsyncAnalyzer(this);
         packetGuard = new PacketGuard(this, analyzer);
         packetGuard.start();
@@ -29,7 +36,19 @@ public final class CheatNeutraliser extends JavaPlugin {
             getCommand("cheatneutraliser").setExecutor(command);
         }
 
-        getLogger().info("CheatNeutraliser enabled: packet safety + asynchronous neutralisation active.");
+        getLogger().info("CheatNeutraliser enabled: protocol safety + heuristic packet analysis + neutralisation active.");
+    }
+
+    public void applyPacketExceptionPolicy() {
+        if (PacketEvents.getAPI() == null) return;
+        boolean neutralise = getConfig().getBoolean("neutralisation.enabled", true)
+                && "NEUTRALISE".equalsIgnoreCase(getConfig().getString("neutralisation.mode", "NEUTRALISE"));
+
+        // PacketEvents exposes this setting specifically for packet processing
+        // exceptions. In neutralise mode we do not want PacketEvents itself to
+        // disconnect the player with "Invalid packet" before our plugin can
+        // observe and account for the event.
+        PacketEvents.getAPI().getSettings().kickOnPacketException(!neutralise);
     }
 
     @Override
