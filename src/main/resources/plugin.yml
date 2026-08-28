@@ -6,6 +6,8 @@ author: CheatNeutraliser
 website: https://github.com/DeepSeek67/Quanum-anticheat
 description: Asynchronous packet-aware cheat neutralisation for Paper 1.21.x.
 load: STARTUP
+depend:
+  - packetevents
 commands:
   cheatneutraliser:
     description: CheatNeutraliser administration command
