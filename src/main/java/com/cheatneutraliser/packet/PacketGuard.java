@@ -3,9 +3,9 @@ package com.cheatneutraliser.packet;
 import com.cheatneutraliser.CheatNeutraliser;
 import com.cheatneutraliser.analysis.AsyncAnalyzer;
 import com.cheatneutraliser.analysis.PacketSnapshot;
-import io.github.retrooper.packetevents.PacketEvents;
-import io.github.retrooper.packetevents.event.PacketListenerAbstract;
-import io.github.retrooper.packetevents.event.PacketReceiveEvent;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.event.PacketListenerAbstract;
+import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import io.netty.buffer.ByteBuf;
 import org.bukkit.entity.Player;
 
@@ -37,13 +37,17 @@ public final class PacketGuard {
         windows.clear();
     }
 
-    public int getTrackedPlayers() { return windows.size(); }
+    public int getTrackedPlayers() {
+        return windows.size();
+    }
 
     private final class PacketListener extends PacketListenerAbstract {
         @Override
         public void onPacketReceive(PacketReceiveEvent event) {
             Player player = event.getPlayer();
-            if (player == null) return;
+            if (player == null) {
+                return;
+            }
 
             UUID uuid = player.getUniqueId();
             RateWindow window = windows.computeIfAbsent(uuid, ignored -> new RateWindow());
@@ -57,8 +61,6 @@ public final class PacketGuard {
             Object rawBuffer = event.getByteBuf();
             int bytes = rawBuffer instanceof ByteBuf buffer ? buffer.readableBytes() : 0;
 
-            // These checks happen before the packet reaches normal server packet handling.
-            // They are deterministic and allocation-light.
             boolean malformed = bytes > plugin.getConfig().getInt("analysis.max-packet-bytes", 2_097_152);
             boolean impossibleOrder = window.isImpossibleOrder(packetName);
             boolean rateExceeded = secondCount > plugin.getConfig().getInt("analysis.max-packets-per-second", 800)
