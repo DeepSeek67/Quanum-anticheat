@@ -1,6 +1,8 @@
 # CheatNeutraliser configuration
-# Packet parsing and immediate safety decisions stay on the Netty/PacketEvents thread.
-# Expensive scoring runs on a bounded async executor and never touches Bukkit state.
+#
+# IMPORTANT: client-profiles are behavioral sensitivity presets, not a promise that a
+# server can read a client's source code or prove which client is installed. The
+# neutraliser remains metadata-independent and works from packet/protocol behavior.
 
 analysis:
   worker-threads: 2
@@ -12,12 +14,39 @@ analysis:
   max-packets-per-second: 800
   burst-packets-per-100ms: 120
 
+client-profiles:
+  # Add one or more names. Multiple profiles increase behavioral coverage.
+  # Supported built-in presets: WURST, PRESTIGE, VAPE, IMPACT, GENERIC
+  enabled:
+    - WURST
+  # Additional strictness per enabled profile. 0.10 = 10% more sensitive.
+  additional-strictness-per-profile: 0.10
+  # Never depend on client mod lists, client branding, fingerprints, or plugin-channel
+  # responses. This is hard-coded in the Java implementation and cannot be disabled here.
+  metadata-independent: true
+
 neutralisation:
   enabled: true
   block-malformed: true
   block-rate-limit: true
   block-impossible-packet-order: true
-  do-not-kick: true
+  # INVALID PACKETS NEVER KICK BY DEFAULT.
+  mode: NEUTRALISE
+
+kick:
+  # Optional enforcement. Leave false for pure neutralisation.
+  enabled: false
+  # Kick only after the configured behavioral score is reached and at least one
+  # client profile is enabled. It is NOT triggered by a single malformed packet.
+  require-profile: true
+  score-threshold: 95
+  rejoin-delay-minutes: 5
+  title:
+    enabled: true
+    text: "&b&lSECURITY"
+  message: "&f[server] &b&lSecurity check triggered. Suspected profile: &e&l%profile%&f.\n&fYou may join again in &e%minutes% minutes&f."
+  # Prefix used by server messages and kick text.
+  prefix: "&f[server]"
 
 logging:
   console: true
