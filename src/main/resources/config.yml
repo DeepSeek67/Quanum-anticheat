@@ -1,65 +1,110 @@
-# CheatNeutraliser - advanced multi-layer configuration
+# CheatNeutraliser v1.1 - multi-layer defensive engine
 #
-# Packet checks are only one layer. Client profiles change the sensitivity of
-# corroborated behavioural anomalies; they do NOT claim to read client source code.
+# The engine is behavioural and protocol-aware. Client names below select
+# conservative rule profiles; they are NOT a claim that the server can read a
+# player's client source code. Normal vanilla traffic must not accumulate risk.
 
 analysis:
   worker-threads: 2
+
+  # Risk is 0-100. A packet is only neutralised by the adaptive score when the
+  # accumulated evidence reaches this value. Hard packet-path limits are checked
+  # synchronously before Minecraft processes the packet.
   block-score: 90
   score-decay-per-second: 6
+
+  # Protocol safety limits.
   max-packet-bytes: 2097152
   max-packets-per-second: 800
   burst-packets-per-100ms: 120
 
-  # Advanced behavioural gates. These are intentionally conservative so ordinary
-  # Minecraft movement/combat does not accumulate risk just by playing normally.
+  # Behavioural correlation.
   same-packet-streak: 12
   ultra-fast-packet-nanos: 2000000
-  require-corroboration: true
+  minimum-independent-signals: 2
 
 client-profiles:
-  # Built-in behavioural sensitivity presets. Add several to combine their checks.
+  # Add as many profiles as wanted. Profiles combine only when their rules
+  # independently match real anomalous behaviour.
   enabled:
     - WURST
-  additional-strictness-per-profile: 0.10
+    # - PRESTIGE
+    # - VAPE
+    # - IMPACT
+
+  # Explicit rules make the system extensible without changing Java code.
+  # Unknown rule names are ignored safely.
+  rules:
+    WURST:
+      - movement-timing
+      - interaction-burst
+      - repeated-actions
+      - high-action-rate
+      - impossible-order
+    PRESTIGE:
+      - combat-timing
+      - movement-timing
+      - repeated-actions
+      - high-action-rate
+      - impossible-order
+    VAPE:
+      - combat-timing
+      - repeated-actions
+      - high-action-rate
+      - impossible-order
+    IMPACT:
+      - movement-timing
+      - interaction-burst
+      - repeated-actions
+      - impossible-order
+
+  # Keep this independent from packet metadata. Hiding a client brand must not
+  # disable behavioural analysis.
   metadata-independent: true
 
-  # Optional server-side client/mod signals. These are evidence only and never the
-  # sole reason for enforcement. A client can hide these signals, so behaviour remains active.
+  # These are optional protocol-channel hints only. They are evidence, not proof.
+  # Behavioural checks remain active if a client hides its metadata.
   protocol-signals:
     enabled: true
     known-channels:
       WURST:
         - "wurst"
         - "wurstclient"
-      VAPE:
-        - "vape"
       PRESTIGE:
         - "prestige"
+      VAPE:
+        - "vape"
 
 neutralisation:
   enabled: true
   mode: NEUTRALISE
+
+  # Immediate packet-path protections.
   block-malformed: true
   block-rate-limit: true
   block-impossible-packet-order: true
 
-  # IMPORTANT: when true, CheatNeutraliser suppresses Bukkit kick events whose
-  # reason clearly identifies a packet decoder/invalid-packet failure. The bad
-  # packet is still not allowed into normal gameplay; the player simply is not kicked.
+  # Suppress Bukkit invalid-packet kick events when possible. This does NOT
+  # magically prevent a disconnect performed below Bukkit by the network stack.
   intercept-invalid-packet-kicks: true
 
+  # Never punish solely because a configured client profile exists.
+  require-behavioural-evidence: true
+
 kick:
-  # Completely separate from packet neutralisation. Default is OFF.
+  # OFF by default. Set true AND mode: KICK if server owners explicitly want
+  # enforcement after the behavioural threshold is reached.
   enabled: false
   require-profile: true
   score-threshold: 95
   rejoin-delay-minutes: 5
+
   title:
     enabled: true
     text: "&b&lSECURITY"
-  message: "&f[server] &b&lSecurity check triggered. Suspected profile: &e&l%profile%&f.\n&fYou may join again in &e%minutes% minutes&f."
+
   prefix: "&f[server]"
+  message: "&f[server] &b&lSecurity check triggered. Suspected profile: &e&l%profile%&f.\n&fYou may join again in &e%minutes% minutes&f."
 
 logging:
   console: true
