@@ -6,9 +6,9 @@ import com.cheatneutraliser.analysis.PacketSnapshot;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
-import io.netty.buffer.ByteBuf;
 import org.bukkit.entity.Player;
 
+import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,12 +25,17 @@ public final class PacketGuard {
     }
 
     public void start() {
+        if (PacketEvents.getAPI() == null) {
+            plugin.getLogger().severe("PacketEvents API is unavailable. CheatNeutraliser will not start its packet guard.");
+            return;
+        }
+
         listener = new PacketListener();
         PacketEvents.getAPI().getEventManager().registerListener(listener);
     }
 
     public void stop() {
-        if (listener != null) {
+        if (listener != null && PacketEvents.getAPI() != null) {
             PacketEvents.getAPI().getEventManager().unregisterListener(listener);
             listener = null;
         }
@@ -58,8 +63,7 @@ public final class PacketGuard {
             int burstCount = window.burst.incrementAndGet();
 
             String packetName = event.getPacketName();
-            Object rawBuffer = event.getByteBuf();
-            int bytes = rawBuffer instanceof ByteBuf buffer ? buffer.readableBytes() : 0;
+            int bytes = readableBytes(event.getByteBuf());
 
             boolean malformed = bytes > plugin.getConfig().getInt("analysis.max-packet-bytes", 2_097_152);
             boolean impossibleOrder = window.isImpossibleOrder(packetName);
@@ -106,6 +110,25 @@ public final class PacketGuard {
                             + " (score=" + decision.score() + ", reason=" + decision.reason() + ")");
                 }
             });
+        }
+    }
+
+    /**
+     * PacketEvents deliberately exposes the raw buffer as Object so plugins do not
+     * need to depend directly on a particular Netty version. Keep that property
+     * here instead of importing Netty classes into the plugin's compile classpath.
+     */
+    private static int readableBytes(Object rawBuffer) {
+        if (rawBuffer == null) {
+            return 0;
+        }
+
+        try {
+            Method method = rawBuffer.getClass().getMethod("readableBytes");
+            Object result = method.invoke(rawBuffer);
+            return result instanceof Number number ? Math.max(0, number.intValue()) : 0;
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return 0;
         }
     }
 
