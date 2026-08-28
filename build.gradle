@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '9.0.0'
+}
+
+group = 'com.cheatneutraliser'
+version = '1.0.0'
+
+description = 'Asynchronous packet-aware cheat neutralisation for Paper servers'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+repositories {
+    maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
+    maven { url = uri('https://repo.codemc.io/repository/maven-releases/') }
+    maven { url = uri('https://repo.codemc.io/repository/maven-snapshots/') }
+}
+
+dependencies {
+    compileOnly('io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT')
+    implementation('com.github.retrooper:packetevents-spigot:2.11.1')
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+processResources {
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand(version: project.version)
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    relocate('com.github.retrooper.packetevents', 'com.cheatneutraliser.libs.packetevents')
+}
+
+tasks.build { dependsOn tasks.shadowJar }
