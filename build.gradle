@@ -4,9 +4,9 @@ plugins {
 }
 
 group = 'com.cheatneutraliser'
-version = '1.0.0'
+version = '1.1.0'
 
-description = 'Asynchronous packet-aware cheat neutralisation for Paper servers'
+description = 'Multi-layer asynchronous packet-aware cheat neutralisation for Paper servers'
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
