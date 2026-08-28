@@ -21,7 +21,7 @@ repositories {
 
 dependencies {
     compileOnly('io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT')
-    implementation('io.github.retrooper.packetevents:packetevents-spigot:2.13.0')
+    implementation('com.github.retrooper.packetevents:packetevents-spigot:2.13.0')
 }
 
 compileJava {
@@ -39,7 +39,6 @@ processResources {
 shadowJar {
     archiveClassifier.set('')
     relocate('com.github.retrooper.packetevents', 'com.cheatneutraliser.libs.packetevents')
-    relocate('io.github.retrooper.packetevents', 'com.cheatneutraliser.libs.packetevents')
 }
 
 tasks.named('build') {
