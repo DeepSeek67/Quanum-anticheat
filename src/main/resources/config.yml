@@ -1,0 +1,26 @@
+# CheatNeutraliser configuration
+# Packet parsing and immediate safety decisions stay on the Netty/PacketEvents thread.
+# Expensive scoring runs on a bounded async executor and never touches Bukkit state.
+
+analysis:
+  worker-threads: 2
+  suspicious-score: 65
+  block-score: 90
+  score-decay-per-second: 3
+  quarantine-millis: 1500
+  max-packet-bytes: 2097152
+  max-packets-per-second: 800
+  burst-packets-per-100ms: 120
+
+neutralisation:
+  enabled: true
+  block-malformed: true
+  block-rate-limit: true
+  block-impossible-packet-order: true
+  do-not-kick: true
+
+logging:
+  console: true
+  blocked-packets: true
+  suspicious-packets: false
+  debug: false
