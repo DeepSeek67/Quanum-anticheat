@@ -62,21 +62,24 @@ public final class AsyncAnalyzer {
 
         List<String> profiles = plugin.getConfig().getStringList("client-profiles.enabled");
         double strictness = 1.0D;
+        int strongestBonus = 0;
         if (!profiles.isEmpty()) {
             strictness += Math.max(0.0D, plugin.getConfig().getDouble(
                     "client-profiles.additional-strictness-per-profile", 0.10D)) * profiles.size();
 
             String packet = s.packetName() == null ? "" : s.packetName().toUpperCase(Locale.ROOT);
-            int profileBonus = 0;
             for (String configured : profiles) {
                 String name = configured == null ? "" : configured.trim().toUpperCase(Locale.ROOT);
                 if (name.isEmpty()) {
                     continue;
                 }
-                profile = name;
-                profileBonus += profileBehaviorBonus(name, packet, s);
+                int bonus = profileBehaviorBonus(name, packet, s);
+                if (bonus > strongestBonus) {
+                    strongestBonus = bonus;
+                    profile = name;
+                }
             }
-            delta += profileBonus;
+            delta += strongestBonus;
         }
 
         delta = (int) Math.ceil(delta * strictness);
