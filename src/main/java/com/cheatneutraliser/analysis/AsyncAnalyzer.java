@@ -57,10 +57,15 @@ public final class AsyncAnalyzer {
             reason = "packet burst exceeded";
         }
 
+        // Capture the computed values before entering the lambda. Java requires
+        // variables referenced by lambdas to be final or effectively final.
+        final int scoreDelta = delta;
+        final String decisionReason = reason;
+
         AtomicInteger score = scores.computeIfAbsent(s.playerId(), ignored -> new AtomicInteger());
-        int current = score.updateAndGet(old -> Math.max(0, Math.min(100, old + delta)));
+        int current = score.updateAndGet(old -> Math.max(0, Math.min(100, old + scoreDelta)));
         int blockScore = plugin.getConfig().getInt("analysis.block-score", 90);
-        return new Decision(current, current >= blockScore, reason);
+        return new Decision(current, current >= blockScore, decisionReason);
     }
 
     public int getScore(UUID playerId) {
