@@ -3,9 +3,10 @@ package com.cheatneutraliser.packet;
 import com.cheatneutraliser.CheatNeutraliser;
 import com.cheatneutraliser.analysis.AsyncAnalyzer;
 import com.cheatneutraliser.analysis.PacketSnapshot;
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.event.PacketListenerAbstract;
-import com.github.retrooper.packetevents.event.PacketReceiveEvent;
+import io.github.retrooper.packetevents.PacketEvents;
+import io.github.retrooper.packetevents.event.PacketListenerAbstract;
+import io.github.retrooper.packetevents.event.PacketReceiveEvent;
+import io.netty.buffer.ByteBuf;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -41,8 +42,9 @@ public final class PacketGuard {
     private final class PacketListener extends PacketListenerAbstract {
         @Override
         public void onPacketReceive(PacketReceiveEvent event) {
-            if (!event.getPlayer().isPresent()) return;
-            Player player = event.getPlayer().get();
+            Player player = event.getPlayer();
+            if (player == null) return;
+
             UUID uuid = player.getUniqueId();
             RateWindow window = windows.computeIfAbsent(uuid, ignored -> new RateWindow());
 
@@ -51,15 +53,17 @@ public final class PacketGuard {
             int secondCount = window.second.incrementAndGet();
             int burstCount = window.burst.incrementAndGet();
 
-            String packetName = event.getPacketType().getName();
-            int bytes = event.getByteBuf() == null ? 0 : event.getByteBuf().readableBytes();
+            String packetName = event.getPacketName();
+            Object rawBuffer = event.getByteBuf();
+            int bytes = rawBuffer instanceof ByteBuf buffer ? buffer.readableBytes() : 0;
 
             // These checks happen before the packet reaches normal server packet handling.
-            // They are deliberately deterministic and allocation-light.
-            boolean malformed = bytes < 0 || bytes > plugin.getConfig().getInt("analysis.max-packet-bytes", 2_097_152);
+            // They are deterministic and allocation-light.
+            boolean malformed = bytes > plugin.getConfig().getInt("analysis.max-packet-bytes", 2_097_152);
             boolean impossibleOrder = window.isImpossibleOrder(packetName);
             boolean rateExceeded = secondCount > plugin.getConfig().getInt("analysis.max-packets-per-second", 800)
                     || burstCount > plugin.getConfig().getInt("analysis.burst-packets-per-100ms", 120);
+            boolean scoreExceeded = analyzer.getScore(uuid) >= plugin.getConfig().getInt("analysis.block-score", 90);
 
             if (plugin.getConfig().getBoolean("neutralisation.block-malformed", true) && malformed) {
                 event.setCancelled(true);
@@ -76,6 +80,11 @@ public final class PacketGuard {
                 logBlocked(player, packetName, "invalid packet order");
                 return;
             }
+            if (plugin.getConfig().getBoolean("neutralisation.enabled", true) && scoreExceeded) {
+                event.setCancelled(true);
+                logBlocked(player, packetName, "adaptive risk threshold");
+                return;
+            }
 
             PacketSnapshot snapshot = new PacketSnapshot(
                     uuid,
@@ -90,11 +99,8 @@ public final class PacketGuard {
             );
 
             analyzer.analyze(snapshot).thenAccept(decision -> {
-                // Async code does not touch Bukkit. If the score becomes high, the next
-                // matching packet is synchronously cancelled by the cheap guard above.
-                // This avoids blocking the server thread while still adapting protection.
-                if (decision.block() && plugin.getConfig().getBoolean("logging.blocked-packets", true)) {
-                    plugin.getLogger().fine("Neutralisation threshold reached for " + player.getName()
+                if (decision.block() && plugin.getConfig().getBoolean("logging.debug", false)) {
+                    plugin.getLogger().info("Risk threshold reached for " + player.getName()
                             + " (score=" + decision.score() + ", reason=" + decision.reason() + ")");
                 }
             });
