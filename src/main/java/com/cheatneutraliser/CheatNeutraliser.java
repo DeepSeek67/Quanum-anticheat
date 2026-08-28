@@ -11,28 +11,42 @@ public final class CheatNeutraliser extends JavaPlugin {
     private AsyncAnalyzer analyzer;
 
     @Override
-    public void onLoad() {
-        PacketEvents.create(this);
-        PacketEvents.getAPI().init();
-    }
-
-    @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        if (PacketEvents.getAPI() == null) {
+            getLogger().severe("PacketEvents is required but its API is unavailable. Disabling CheatNeutraliser.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         analyzer = new AsyncAnalyzer(this);
         packetGuard = new PacketGuard(this, analyzer);
         packetGuard.start();
-        getCommand("cheatneutraliser").setExecutor(new CheatNeutraliserCommand(this));
+
+        CheatNeutraliserCommand command = new CheatNeutraliserCommand(this);
+        if (getCommand("cheatneutraliser") != null) {
+            getCommand("cheatneutraliser").setExecutor(command);
+        }
+
         getLogger().info("CheatNeutraliser enabled: packet safety + asynchronous neutralisation active.");
     }
 
     @Override
     public void onDisable() {
-        if (packetGuard != null) packetGuard.stop();
-        if (analyzer != null) analyzer.shutdown();
-        PacketEvents.getAPI().terminate();
+        if (packetGuard != null) {
+            packetGuard.stop();
+        }
+        if (analyzer != null) {
+            analyzer.shutdown();
+        }
     }
 
-    public PacketGuard getPacketGuard() { return packetGuard; }
-    public AsyncAnalyzer getAnalyzer() { return analyzer; }
+    public PacketGuard getPacketGuard() {
+        return packetGuard;
+    }
+
+    public AsyncAnalyzer getAnalyzer() {
+        return analyzer;
+    }
 }
